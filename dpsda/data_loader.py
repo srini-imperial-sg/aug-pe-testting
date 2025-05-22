@@ -75,7 +75,7 @@ def load_dataset_with_special(data_file, gen):
 
 def load_data(dataset="yelp", data_file="data/yelp/train.csv", num_samples=-1, subsample_one_class=False, gen=False):
     print("data_file", data_file)
-    if dataset in ('cls/cas', 'cls/psytar', 'cls/hallmarks_of_cancer', 'cls/mimic', 'cls/n2c2_2008'):
+    if dataset in ('cls/cas', 'cls/psytar', 'cls/hallmarks_of_cancer', 'cls/mimic', 'cls/n2c2_2008', 'cls/Daniel-ML', 'cls/luckycat37'):
         try:
           raw_datasets = load_dataset(f'json', data_files=data_file, trust_remote_code=True)
         except:

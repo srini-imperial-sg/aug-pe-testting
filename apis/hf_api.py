@@ -6,7 +6,7 @@ from .api import API
 from apis.biomed import get_prompt, ALL_MIMIC_TONES
 import transformers
 import random
-from .utils import set_seed, get_subcategories, ALL_styles, ALL_OPENREVIEW_styles, ALL_PUBMED_styles
+from .utils import set_seed, get_subcategories, ALL_styles, ALL_OPENREVIEW_styles, ALL_PUBMED_styles, ALL_FINANCIAL_styles, ALL_FINANCIAL_luckycat_styles
 import re
 import collections
 
@@ -89,7 +89,8 @@ class HFAPI(API):
             type=str,
             default='rephrase',
             choices=["yelp_rephrase_tone", "openreview_rephrase_tone", "pubmed_rephrase_tone", "cas_paraphrase", 'psytar_rephrase_tone',
-                     'hallmarks_of_cancer_rephrase_tone', "mimic_rephrase_tone", "n2c2_2008_rephrase_tone"
+                     'hallmarks_of_cancer_rephrase_tone', "mimic_rephrase_tone", "n2c2_2008_rephrase_tone", "danielml_rephrase_tone",
+                     "luckycat37_rephrase_tone"
                      ],
             help='Which image feature extractor to use')
         parser.add_argument("--mlm_probability", type=float, default=0.5)
@@ -132,7 +133,6 @@ class HFAPI(API):
         
         parser.add_argument("--apply_template", action="store_true",
                             help="Whether to apply a chat template.")
-        # print(parser)
         return parser
 
     def text_random_sampling(self, num_samples, prompt_counter=None, lens_dict=None):
@@ -146,6 +146,7 @@ class HFAPI(API):
 
         simulate_num = 0
         for prompt in tqdm(prompt_counter):
+            print("prompt", prompt)
             # generation is proportional to the label distributions
             simulate_num_seq_to_generate = round(
                 prompt_counter[prompt] * ratio_generation_training)
@@ -196,8 +197,13 @@ class HFAPI(API):
                     full_prompt_text = get_prompt(prompt, 'mimic')
                 elif 'n2c2_2008' in self.variation_type:
                     full_prompt_text = get_prompt(prompt, 'n2c2_2008')
+                elif 'danielml' in self.variation_type:
+                    full_prompt_text = get_prompt(prompt, 'danielml')
+                elif 'luckycat37' in self.variation_type:
+                    full_prompt_text = get_prompt(prompt, 'luckycat37')
                 else:
                     raise NotImplementedError(f"Unknown variation type: {self.variation_type}")
+            
             if self.apply_template:
                 if self.tokenizer.get_chat_template():
                     full_prompt_text = self.tokenizer.apply_chat_template(
@@ -216,7 +222,7 @@ class HFAPI(API):
                     full_prompt_text = full_prompt_text.rsplit("<|eot_id|>",1)[0]
                 else:
                     print("Don't have template for this model!")
-            # print(full_prompt_text)
+            # print("full_prompt_text", full_prompt_text)
             inputs = self.tokenizer(full_prompt_text, return_tensors='pt')
             # print(inputs)
             prompt_input_ids = inputs['input_ids']
@@ -332,7 +338,24 @@ class HFAPI(API):
         elif 'mimic' in variation_type or 'n2c2_2008' in variation_type:
             selected_style = random.choice(ALL_MIMIC_TONES)
             prompt = f"Keeping the information about {label.replace('|', ', ')}, rephrase the note in the following style: {selected_style}.\nNote:\n{sequence}"
-        # print(prompt)
+        elif 'danielml' in variation_type:
+            selected_style = random.choice(ALL_FINANCIAL_styles)
+            label_map_prompts = {
+                "positive": f"Rephrase the following financial statement to emphasize growth, opportunity, or favorable outcomes, in the following style: {selected_style}.\nNote:\n{sequence}",
+                "negative": f"Rephrase the following financial statement to highlight risks, setbacks, or challenges, in the following style: {selected_style}.\nNote:\n{sequence}",
+                "neutral": f"Rephrase the following financial statement with an objective, professional tone, in the following style: {selected_style}.\nNote:\n{sequence}"}       
+            sentiment = label
+            prompt = label_map_prompts.get(sentiment, f"Rephrase the following financial statement in a professional tone, using the style: {selected_style}.\nNote:\n{sequence}")
+        elif 'luckycat37' in variation_type:
+            sentiment = label
+            selected_style = random.choice(ALL_FINANCIAL_luckycat_styles)
+            label_map_prompts = {
+        "positive": f"Rephrase the following financial statement to emphasize growth, opportunity, or favorable outcomes, in the following style: {selected_style}.\nNote:\n{sequence}",
+        "negative": f"Rephrase the following financial statement to highlight risks, setbacks, or challenges, in the following style: {selected_style}.\nNote:\n{sequence}",
+        "neutral":  f"Rephrase the following financial statement with an objective, professional tone, in the following style: {selected_style}.\nNote:\n{sequence}"
+    }
+            prompt = label_map_prompts.get(sentiment, f"Rephrase the following financial statement in a professional tone, using the style: {selected_style}.\nNote:\n{sequence}")
+
         return prompt
 
     def _text_variation(self, sequences, labels, variation_degree, variation_type, batch_size):
