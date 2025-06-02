@@ -71,6 +71,9 @@ ALL_FINANCIAL_luckycat_styles = ["Bloomberg-style concise reporting",
     "Wall Street Journal-style corporate focus",
     "TechCrunch-style tech finance reporting"]
 
+ALL_ASYLEX_styles = ["in a professional way", "in a professional tone",  "in a professional style",   "in a concise manner", "in a formal manner"]
+
+
 def set_seed(seed, n_gpu=0):
     torch.manual_seed(seed)
     np.random.seed(seed)

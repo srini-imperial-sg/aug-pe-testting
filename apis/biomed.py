@@ -102,9 +102,9 @@ def get_luckycat37_prompt_from_sentiment_only(sentiment):
 
     # Generate article body with slight variation
     body_templates = {
-        "positive": f"({random.choice(publishers)}) -- {title}. Analysts note optimism among investors as indicators remain strong. Tech and energy sectors are driving the rally.",
-        "negative": f"({random.choice(publishers)}) -- {title}. Experts warn of potential long-term impact. Financials and industrials led the losses in the market today.",
-        "neutral": f"({random.choice(publishers)}) -- {title}. The report provides insight into economic dynamics but does not indicate a clear market direction."
+        "positive": f"As a reporter for {random.choice(publishers)}) , write an article with title:  {title}",
+        "negative": f"As a reporter for {random.choice(publishers)}) , write an article with title:  {title}",
+        "neutral": f"As a reporter for {random.choice(publishers)}) , write an article with title:  {title}"
     }
 
     prompt = body_templates.get(sentiment, "As a financial expert, provide a contextual analysis.")

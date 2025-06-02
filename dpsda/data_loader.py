@@ -16,6 +16,8 @@ def sample_dataset(data_name, dataset, label_column_name='label1', sample_size=5
             label2 = 'Review Stars: 5.0'
             indices = np.where((np.array(training_dataset['label1']) == label1) & (
                 np.array(training_dataset['label2']) == label2))[0]
+        elif data_name == "asylex":
+            indices = list(range(len(training_dataset)))
         elif data_name == "openreview":
             area = "Area: Social Aspects of Machine Learning (eg, AI safety, fairness, privacy, interpretability, human-AI interaction, ethics)"
             recommendation = "Recommendation: 8: accept, good paper"
@@ -39,7 +41,7 @@ def sample_dataset(data_name, dataset, label_column_name='label1', sample_size=5
                 indices, size=sample_size, replace=False)
             np.random.shuffle(sample_indices)
     else:
-        if data_name == "pubmed" or data_name == "openreview":  # random sample
+        if data_name == "pubmed" or data_name == "openreview" or data_name == "asylex":  # random sample
             indices = list(range(len(training_dataset)))
             sample_indices = np.random.choice(
                 indices, size=sample_size, replace=False)
@@ -171,6 +173,33 @@ def load_data(dataset="yelp", data_file="data/yelp/train.csv", num_samples=-1, s
             train_data.append(line['text'])
             train_labels.append(prompt)
         return train_data, train_labels, prompt_counter, prompt_idexer
-
+    elif dataset == "asylex":
+        prompt_counter = collections.Counter()
+        raw_datasets = load_dataset_with_special(data_file, gen)
+        original_data = sample_dataset(dataset, raw_datasets, label_column_name='decision_outcome',
+                                       sample_size=num_samples, subsample_one_class=subsample_one_class)
+        prompt_idexer = dict()
+        train_data = []
+        train_labels = []
+        decision_outcome_map = {
+            0: "reject",
+            1: "granted",
+            2: "uncertain"
+        }
+        for i , line in enumerate(original_data['train']):
+            try:
+                prompt = f"{decision_outcome_map[line['decision_outcome']]}"
+            except:
+                prompt = f"{line['decision_outcome']}"
+            prompt_counter[prompt] += 1
+            if prompt not in prompt_idexer.keys():
+                prompt_idexer[prompt] = [i]
+            else:
+                prompt_idexer[prompt].append(i)
+            train_data.append(line['text'])
+            train_labels.append(prompt)
+        print("train data" , train_data[:3])
+        print("train labels" , train_labels[:3])
+        return train_data, train_labels, prompt_counter, prompt_idexer
     else:
         raise ValueError(f'Unknown dataset name {dataset}')

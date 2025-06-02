@@ -56,9 +56,9 @@ for noise in "0" "20.98" "11.19" "6.01" "3.28"; do
     echo $result_folder
     mkdir -p $result_folder
     ### run PE
-    python main.py ${args} ${data_checkpoint_args} \
+    CUDA_VISIBLE_DEVICES=2 python main.py ${args} ${data_checkpoint_args} \
     --dataset cls/psytar \
-    --train_data_file ../../data/cls/psytar/original/train-original.jsonl \
+    --train_data_file /home/srini/dp-transformers/psytar/train-original.jsonl \
     --api ${api} \
     --noise ${noise} \
     --model_type ${model_type} \
@@ -81,5 +81,5 @@ for noise in "0" "20.98" "11.19" "6.01" "3.28"; do
     --result_folder ${result_folder} \
     --log_online \
     --apply_template \
-    --train_data_embeddings_file result/embeddings/sentence-t5-base/cls_psytar_train_all.embeddings.npz > $result_folder/output.log 2>&1
+    --train_data_embeddings_file /home/srini/comparison_study_aug_pe/aug-pe-testting/result/embeddings/sentence-t5-base/asylex_train_all.embeddings.npz > $result_folder/output.log 2>&1
 done

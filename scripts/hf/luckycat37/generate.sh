@@ -50,15 +50,15 @@ echo load data from ${data_checkpoint_args} ${args}
 # threshold eps 2 break_noise 6.189999999997841 eps 2.000821
 # threshold eps 4 break_noise 3.359999999997399 eps 4.007704
 # "3.36" "6.19" "11.56" "20"
-for noise in "3.36"; do 
-    echo "Noise level ${noise}."
-    result_folder="result/luckycat37/${model_type}_${feat_ext//\//_}/${num_samples}_n${noise}_L${L}_initL${init_L}_var${lookahead_degree}_${var_type}_${select_syn_mode}_len${length}var${word_var_scale}_t${temperature}"
-    echo $result_folder
-    mkdir -p $result_folder
-    ### run PE
-    python main.py ${args} ${data_checkpoint_args} \
+# for noise in "3.36"; do 
+echo "Noise level ${noise}."
+result_folder="result/luckycat37/${model_type}_${feat_ext//\//_}/${num_samples}_n${noise}_L${L}_initL${init_L}_var${lookahead_degree}_${var_type}_${select_syn_mode}_len${length}var${word_var_scale}_t${temperature}"
+echo $result_folder
+mkdir -p $result_folder
+### run PE
+python main.py ${args} ${data_checkpoint_args} \
     --dataset cls/luckycat37 \
-    --train_data_file ../../data/cls/luckycat37/original/train_original.jsonl \
+    --train_data_file /home/srini/comparison_study_aug_pe/aug-pe-testting/data/luckycat/train_original.jsonl \
     --api ${api} \
     --noise ${noise} \
     --model_type ${model_type} \
@@ -82,4 +82,4 @@ for noise in "3.36"; do
     --log_online \
     --apply_template \
     --train_data_embeddings_file result/embeddings/${feat_ext//\//_}/cls_luckycat37_train_all.embeddings.npz #> $result_folder/output.log 2>&1
-done
+# done

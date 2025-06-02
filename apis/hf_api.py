@@ -6,10 +6,10 @@ from .api import API
 from apis.biomed import get_prompt, ALL_MIMIC_TONES
 import transformers
 import random
-from .utils import set_seed, get_subcategories, ALL_styles, ALL_OPENREVIEW_styles, ALL_PUBMED_styles, ALL_FINANCIAL_styles, ALL_FINANCIAL_luckycat_styles
+from .utils import set_seed, get_subcategories, ALL_styles, ALL_OPENREVIEW_styles, ALL_PUBMED_styles, ALL_FINANCIAL_styles, ALL_FINANCIAL_luckycat_styles, ALL_ASYLEX_styles
 import re
 import collections
-
+from huggingface_hub import InferenceClient
 
 class HFAPI(API):
     def __init__(self,
@@ -37,10 +37,13 @@ class HFAPI(API):
         self.device = torch.device(
             "cuda" if torch.cuda.is_available() and not self.no_cuda else "cpu")
         self.n_gpu = 0 if self.no_cuda else torch.cuda.device_count()
+        self.inference_client = InferenceClient(
+            base_url="http://localhost:8001/generate"
+        )
         set_seed(seed=seed, n_gpu=self.n_gpu)
         self.dry_run = dry_run
         self.apply_template = apply_template
-
+        
         self.use_subcategory = use_subcategory
         if use_subcategory:
             self.subcategory_dict = {}
@@ -90,7 +93,7 @@ class HFAPI(API):
             default='rephrase',
             choices=["yelp_rephrase_tone", "openreview_rephrase_tone", "pubmed_rephrase_tone", "cas_paraphrase", 'psytar_rephrase_tone',
                      'hallmarks_of_cancer_rephrase_tone', "mimic_rephrase_tone", "n2c2_2008_rephrase_tone", "danielml_rephrase_tone",
-                     "luckycat37_rephrase_tone"
+                     "luckycat37_rephrase_tone", "asylex_rephrase_tone"
                      ],
             help='Which image feature extractor to use')
         parser.add_argument("--mlm_probability", type=float, default=0.5)
@@ -146,7 +149,6 @@ class HFAPI(API):
 
         simulate_num = 0
         for prompt in tqdm(prompt_counter):
-            print("prompt", prompt)
             # generation is proportional to the label distributions
             simulate_num_seq_to_generate = round(
                 prompt_counter[prompt] * ratio_generation_training)
@@ -176,7 +178,8 @@ class HFAPI(API):
 
                 elif "pubmed" in self.variation_type:
                     full_prompt_text = "Using a variety of sentence structures, write an abstract for a medical research paper: "
-
+                elif "asylex" in self.variation_type:
+                    full_prompt_text = f"Suppose you are a legal expert. Write a sample legal case for refugee status determination where the verdict is {prompt}"
             else:
                 if "cas" in self.variation_type:
                     full_prompt_text = "Écrivez une phrase en français tirée d'un essai clinique. "
@@ -231,7 +234,7 @@ class HFAPI(API):
             before_gen_length = len(full_prompt_text)
             if num_seq_to_generate > 0:
                 # condition on the prompt
-                sequences = self._generate_text(prompt_input_ids, num_seq_to_generate,
+                sequences = self._generate_text(full_prompt_text, prompt_input_ids, num_seq_to_generate,
                                                 max_length=self.length, batch_size=self.random_sampling_batch_size,
                                                 before_gen_length=before_gen_length, prompt_attn_mask=prompt_attn_mask)
                 all_sequences += sequences
@@ -243,38 +246,42 @@ class HFAPI(API):
         torch.cuda.empty_cache()
         return all_sequences,  additional_info, sync_labels_counter, all_prefix_prompts
 
-    def _generate_text(self, prompt, seq_num, max_length, batch_size, before_gen_length, prompt_attn_mask=None):
+    def _generate_text(self,full_prompt_text, prompt, seq_num, max_length, batch_size, before_gen_length, prompt_attn_mask=None):
 
-        all_data = []
+        generated_sequences = []
         if seq_num < batch_size:
             batch_size = seq_num + 1  # TODO: improve
-
+        all_data = []
         num_return_sequences = 2 if batch_size > 1 else 1
+        print("seq_num", seq_num)
+        print("batch_size", batch_size)
+        print("num_return_sequences", num_return_sequences)
+        print("max_length", max_length)
         for i in tqdm(range(seq_num // batch_size + 1)):
             if self.dry_run:
                 generated_sequences = ["s" * max_length] * batch_size
             else:
-                input_ids = prompt.repeat(
-                    batch_size, 1).to(self.device)
-                attn_mask = prompt_attn_mask.repeat(
-                    batch_size, 1).to(self.device)
-                with torch.no_grad():
-                    output_sequences = self.model.generate(
-                        input_ids=input_ids,
-                        attention_mask=attn_mask,
+                for _ in range(batch_size):
+                    output = self.inference_client.text_generation(
+                        prompt=full_prompt_text,
                         max_new_tokens=max_length,
                         temperature=self.temperature,
                         top_k=self.k,
                         top_p=self.p,
-                        early_stopping=True,
                         repetition_penalty=self.repetition_penalty,
                         do_sample=self.do_sample,
-                        # overgenerate to ensure we have enough non-empty generated sequences
-                        num_return_sequences=num_return_sequences,
-                        no_repeat_ngram_size=2,
+                        best_of=num_return_sequences,
+                        frequency_penalty=2,
+                        details=True,
                     )
-                    generated_sequences = self.tokenizer.batch_decode(output_sequences[:, input_ids.shape[1]:], skip_special_tokens=True,
-                                                                      clean_up_tokenization_spaces=True)
+
+                    generated_sequences.append(output.generated_text)
+
+                    
+                    for i in output['details']['best_of_sequences']:
+                        generated_sequences.append(i['generated_text'])
+
+                
             for g in generated_sequences:
                 seq = g
                 seq = " ".join(seq.split())
@@ -307,6 +314,9 @@ class HFAPI(API):
             selected_style = ALL_styles[random.randrange(len(ALL_styles))]
             prompt = "Based on {}, please rephrase the following sentences {}:\n{} \n".format(
                 label, selected_style, sequence)
+        elif variation_type == "asylex_rephrase_tone":
+            selected_style = ALL_ASYLEX_styles[random.randrange(len(ALL_ASYLEX_styles))]
+            prompt = "The case verdict is {}. Please rephrase the following sentences {}:\n{} \n".format(label, selected_style, sequence)
         elif variation_type == 'psytar_rephrase_tone':
             label_map = {
                 "ADR": "Adverse Drug Reaction",
@@ -369,7 +379,6 @@ class HFAPI(API):
         all_labels = []
 
         self.model.eval()
-
         self.mlm_probability = variation_degree
 
         for i in tqdm(range(num_seq // batch_size + 1)):
@@ -401,26 +410,21 @@ class HFAPI(API):
                     prompt = prompt.rsplit("<|eot_id|>",1)[0]
                 batch_prompt.append(prompt)
                 batch_labels.append(labels[idx])
+            generated_sequences = []
+            for prompt in batch_prompt:
+                output = self.inference_client.text_generation(
+                    prompt=prompt,
+                    max_new_tokens=self.length,
+                    temperature=self.temperature,
+                    top_k=self.k,
+                    top_p=self.p,
+                    repetition_penalty=self.repetition_penalty,
+                    do_sample=self.do_sample,
+                    frequency_penalty=2,
+                )
+                generated_sequences.append(output)
+            
 
-            with torch.no_grad():
-                batch_inputs = self.tokenizer(batch_prompt, padding=True, return_tensors='pt')
-                input_ids = batch_inputs['input_ids'].to(self.device)  # has been padded into the same lens; cannot be used
-                attention_mask = batch_inputs['attention_mask'].to(self.device)  # has been padded into the same lens; cannot be used
-                beam_output = self.model.generate(input_ids,
-                                                  max_new_tokens=self.length,
-                                                  temperature=self.temperature,
-                                                  top_k=self.k,
-                                                  top_p=self.p,
-                                                  early_stopping=True,
-                                                  repetition_penalty=self.repetition_penalty,
-                                                  do_sample=self.do_sample,
-                                                  num_return_sequences=1,
-                                                  no_repeat_ngram_size=2,
-                                                  attention_mask=attention_mask
-                                                  )
-                # TODO:   skip the tokens so the lens of input_ids is diff from batch_prompt
-                generated_sequences = self.tokenizer.batch_decode(
-                    beam_output[:, input_ids.shape[1]:], skip_special_tokens=True,  clean_up_tokenization_spaces=True)
             for idx in range(len(generated_sequences)):
                 seq = generated_sequences[idx]
                 seq = " ".join(seq.split())
