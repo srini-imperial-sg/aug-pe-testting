@@ -22,7 +22,8 @@ data_files = {'pubmed': 'data/pubmed/train.csv',
               'cls/n2c2_2008': 'data/cls/n2c2_2008/original/train-original.jsonl',
               'cls/Daniel-ML': '../../data/cls/Daniel-ML/original/train_original.jsonl',
               'cls/luckycat37': 'data/luckycat/train_original.jsonl',
-              'asylex': 'data/asylex/train.csv'
+              'asylex': 'data/asylex/final.csv',
+              'aaai': 'data/aaai/folds/train_comb_fold1.csv'
               }
 parser = argparse.ArgumentParser()
 parser.add_argument("--model_name_or_path", type=str,
