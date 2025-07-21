@@ -1,9 +1,9 @@
 mlm_prob=0.6
-var_type="asylex_rephrase_tone"
+var_type="aaai_rephrase_tone"
 feat_ext="sentence-t5-base"
 length=15000
 temperature=1.0
-num_seed_samples=1143
+num_seed_samples=163
 lookahead_degree=0
 k=6 # number of variations
 L=$((k+1))
@@ -27,7 +27,7 @@ elif [ "$model_type" = "gpt2" ]; then
 else
     batch_size=16
 fi
-result_folder="result/asylex/${model_type}_${feat_ext}/${num_samples}_n${noise}_L${L}_initL${init_L}_var${lookahead_degree}_${var_type}_${select_syn_mode}_len${length}var${word_var_scale}_t${temperature}_with_labels_with_noise${noise}"
+result_folder="result/aaai/${model_type}_${feat_ext}/${num_samples}_n${noise}_L${L}_initL${init_L}_var${lookahead_degree}_${var_type}_${select_syn_mode}_len${length}var${word_var_scale}_t${temperature}_with_labels_with_noise${noise}"
 batch_size=16
 random_sampling_batch_size=$((batch_size*4))
 ### load datacheckpoint 
@@ -46,9 +46,9 @@ done
 echo load data from ${data_checkpoint_args} ${args}
 
 ### run PE
-CUDA_VISIBLE_DEVICES=3 python main.py ${args} ${data_checkpoint_args} \
---train_data_file "data/asylex/final.csv" \
---dataset "asylex" \
+CUDA_VISIBLE_DEVICES=7 python main.py ${args} ${data_checkpoint_args} \
+--train_data_file "data/aaai/folds/train_comb_fold1.csv" \
+--dataset "aaai" \
 --api ${api} \
 --noise ${noise} \
 --model_type ${model_type} \
@@ -73,5 +73,5 @@ CUDA_VISIBLE_DEVICES=3 python main.py ${args} ${data_checkpoint_args} \
 --result_folder ${result_folder} \
 --log_online \
 --apply_template \
---train_data_embeddings_file "result/embeddings/${feat_ext}/asylex_train_all.embeddings.npz" 
+--train_data_embeddings_file "result/embeddings/${feat_ext}/aaai_train_all.embeddings.npz" 
 

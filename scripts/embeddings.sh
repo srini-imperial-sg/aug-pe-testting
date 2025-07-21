@@ -36,6 +36,9 @@ case $1 in
   --asylex)
     python pre_comp_emb.py --dataset asylex --model_name_or_path 'sentence-t5-base'
     ;;
+  --aaai)
+    CUDA_VISIBLE_DEVICES=7 python pre_comp_emb.py --dataset aaai --model_name_or_path 'sentence-t5-base'
+    ;;
   --n2c2_2008)
     python pre_comp_emb.py --dataset cls/n2c2_2008 --model_name_or_path 'kamalkraj/BioSimCSE-BioLinkBERT-BASE'
     ;;
