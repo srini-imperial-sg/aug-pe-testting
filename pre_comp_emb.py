@@ -16,10 +16,14 @@ data_files = {'pubmed': 'data/pubmed/train.csv',
               'yelp': 'data/yelp/train.csv',
               'openreview': 'data/openreview/iclr23_reviews_train.csv',
               'cas': 'data/bigbio-datasets/',
-              'cls/psytar': '../../data/cls/psytar/original/train-original.jsonl',
-              'cls/hallmarks_of_cancer': '../../data/cls/hallmarks_of_cancer/original/train-original.jsonl',
+              'cls/psytar': '/data/psytar/train-original.jsonl',
+              'cls/hallmarks_of_cancer': 'data/cls/hallmarks_of_cancer/original/train-original.jsonl',
               'cls/mimic': '../../data/cls/mimic/original/mimic-train-chapter.jsonl',
-              'cls/n2c2_2008': '../../data/cls/n2c2_2008/original/train-original.jsonl',
+              'cls/n2c2_2008': 'data/cls/n2c2_2008/original/train-original.jsonl',
+              'cls/Daniel-ML': '../../data/cls/Daniel-ML/original/train_original.jsonl',
+              'cls/luckycat37': 'data/luckycat/train_original.jsonl',
+              'asylex': 'data/asylex/final.csv',
+              'aaai': 'data/aaai/folds/train_comb_fold1.csv'
               }
 parser = argparse.ArgumentParser()
 parser.add_argument("--model_name_or_path", type=str,

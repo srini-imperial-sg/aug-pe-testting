@@ -1,26 +1,26 @@
-noise=$1
 mlm_prob=0.5
-var_type="psytar_rephrase_tone"
+var_type="luckycat37_rephrase_tone"
 feat_ext="sentence-t5-base"
-length=64
+length=6000
 temperature=1.4
-num_seed_samples=728
+num_seed_samples=1143
 # num_seed_samples=5
 lookahead_degree=0
 k=6 # number of variations
 L=$((k+1))
-init_L=${L}
-num_samples=$((L*num_seed_samples))
+init_L=${L} 
+num_samples=$((L*num_seed_samples)) # 1143 * 7 = 8001
 echo generating $num_samples samples
 epochs=10
 word_var_scale=0
 select_syn_mode=rank
 # model_type=gpt2
-model_type=meta-llama/Llama-3.2-1B-Instruct  
+model_type=meta-llama/Llama-3.2-1B-Instruct
+noise=0
 args=""
 cls_batch_size=32
 api="HFGPT"
-feature_extractor_batch_size=1024
+feature_extractor_batch_size=512
 if [ "$model_type" = "gpt2-large" ]; then
     batch_size=64
 elif [ "$model_type" = "gpt2-medium" ]; then
@@ -28,10 +28,9 @@ elif [ "$model_type" = "gpt2-medium" ]; then
 elif [ "$model_type" = "gpt2" ]; then
     batch_size=512
 else
-    batch_size=192
+    batch_size=32
 fi
 
-batch_size=32
 ### load datacheckpoint 
 data_checkpoint_args=""
 for  (( iter=0; iter<=epochs; iter++ ))
@@ -46,21 +45,21 @@ else
 fi
 done
 echo load data from ${data_checkpoint_args} ${args}
-# threshold eps 0.5 break_noise 20.980000000003784 eps 0.500092
-# threshold eps 1 break_noise 11.190000000005732 eps 1.000600
-# threshold eps 2 break_noise 6.010000000006762 eps 2.003046
-# threshold eps 4 break_noise 3.2800000000073055 eps 4.004656
-# "20.98" "11.19" "6.01" "3.28"
-
-for noise in $noise ; do 
-    echo "Noise level ${noise}."
-    result_folder="result/psytar/${model_type}_${feat_ext//\//_}/${num_samples}_n${noise}_L${L}_initL${init_L}_var${lookahead_degree}_${var_type}_${select_syn_mode}_len${length}var${word_var_scale}_t${temperature}"
-    echo $result_folder
-    mkdir -p $result_folder
-    ### run PE
-    CUDA_VISIBLE_DEVICES=5 python main.py ${args} ${data_checkpoint_args} \
-    --dataset cls/psytar \
-    --train_data_file /home/srini/dp-transformers/psytar/train-original.jsonl \
+# threshold eps 0.5 break_noise 20.0 eps 0.547929
+# threshold eps 1 break_noise 11.55999999999868 eps 1.000116
+# threshold eps 2 break_noise 6.189999999997841 eps 2.000821
+# threshold eps 4 break_noise 3.359999999997399 eps 4.007704
+# "3.36" "6.19" "11.56" "20"
+noise=$1
+# for noise in "20.0" "11.56" "6.19" "3.36"; do 
+echo "Noise level ${noise}."
+result_folder="result/luckycat37/${model_type}_${feat_ext//\//_}/${num_samples}_n${noise}_L${L}_initL${init_L}_var${lookahead_degree}_${var_type}_${select_syn_mode}_len${length}var${word_var_scale}_t${temperature}"
+echo $result_folder
+mkdir -p $result_folder
+### run PE
+CUDA_VISIBLE_DEVICES=7 python main.py ${args} ${data_checkpoint_args} \
+    --dataset cls/luckycat37 \
+    --train_data_file /home/srini/comparison_study_aug_pe/aug-pe-testting/data/luckycat/train_original.jsonl \
     --api ${api} \
     --noise ${noise} \
     --model_type ${model_type} \
@@ -83,5 +82,4 @@ for noise in $noise ; do
     --result_folder ${result_folder} \
     --log_online \
     --apply_template \
-    --train_data_embeddings_file /home/srini/comparison_study_aug_pe/aug-pe-testting/result/embeddings/sentence-t5-base/asylex_train_all.embeddings.npz > $result_folder/output.log 2>&1
-done
+    --train_data_embeddings_file result/embeddings/${feat_ext//\//_}/cls_luckycat37_train_all.embeddings.npz #> $result_folder/output.log 2>&1

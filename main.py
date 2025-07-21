@@ -71,7 +71,7 @@ def main():
 
     private_classes = list(private_labels_counter.keys())
     logging.info(
-        f'Private_num_classes: {len(private_classes)}, Private_num_samples: {len(all_private_samples)}, Private_num_labels:{len(all_private_labels)}')
+        f'Private_num_classes: {len(private_classes)}, Private_num_samples: {len(all_private_samples)}, Private_num_labels:{len(all_private_labels)}, private_labels_counter: {len(private_labels_counter)}')
 
     logging.info('Extracting features of private data')
     if args.train_data_embeddings_file != '':

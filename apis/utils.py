@@ -61,6 +61,19 @@ ALL_OPENREVIEW_styles = ["in a detailed way",  "in a professional way", "with mo
 ALL_PUBMED_styles = ["in a professional way", "in a professional tone",  "in a professional style",   "in a concise manner",
                      "in a creative style", "using imagination", "in a storytelling tone",  "in a formal manner", "using a variety of sentence structures"
                      ]
+ALL_FINANCIAL_styles = ["in a detailed way",  "in a professional way", "with more details",
+                     "with a professional tone",  "in a professional style",   "in a concise manner"]
+
+ALL_FINANCIAL_luckycat_styles = ["Bloomberg-style concise reporting",
+    "Benzinga-style investor tips",
+    "Reuters-style factual tone",
+    "The Economist-style macroeconomic analysis",
+    "Wall Street Journal-style corporate focus",
+    "TechCrunch-style tech finance reporting"]
+
+ALL_ASYLEX_styles = ["in a professional way", "in a professional tone",  "in a professional style",   "in a concise manner", "in a formal manner"]
+
+ALL_AAAI_styles = ["in a professional way", "in a professional tone",  "in a professional style",   "in a concise manner", "in a formal manner"]
 
 
 def set_seed(seed, n_gpu=0):
