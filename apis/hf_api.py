@@ -6,7 +6,7 @@ from .api import API
 from apis.biomed import get_prompt, ALL_MIMIC_TONES
 import transformers
 import random
-from .utils import set_seed, get_subcategories, ALL_styles, ALL_OPENREVIEW_styles, ALL_PUBMED_styles, ALL_FINANCIAL_styles, ALL_FINANCIAL_luckycat_styles, ALL_ASYLEX_styles
+from .utils import set_seed, get_subcategories, ALL_styles, ALL_OPENREVIEW_styles, ALL_PUBMED_styles, ALL_FINANCIAL_styles, ALL_FINANCIAL_luckycat_styles, ALL_ASYLEX_styles, ALL_AAAI_styles
 import re
 import collections
 from huggingface_hub import InferenceClient
@@ -38,7 +38,7 @@ class HFAPI(API):
             "cuda" if torch.cuda.is_available() and not self.no_cuda else "cpu")
         self.n_gpu = 0 if self.no_cuda else torch.cuda.device_count()
         self.inference_client = InferenceClient(
-            base_url="http://localhost:8001/generate"
+            base_url="http://localhost:8000/generate"
         )
         set_seed(seed=seed, n_gpu=self.n_gpu)
         self.dry_run = dry_run
@@ -93,7 +93,7 @@ class HFAPI(API):
             default='rephrase',
             choices=["yelp_rephrase_tone", "openreview_rephrase_tone", "pubmed_rephrase_tone", "cas_paraphrase", 'psytar_rephrase_tone',
                      'hallmarks_of_cancer_rephrase_tone', "mimic_rephrase_tone", "n2c2_2008_rephrase_tone", "danielml_rephrase_tone",
-                     "luckycat37_rephrase_tone", "asylex_rephrase_tone"
+                     "luckycat37_rephrase_tone", "asylex_rephrase_tone", "aaai_rephrase_tone"
                      ],
             help='Which image feature extractor to use')
         parser.add_argument("--mlm_probability", type=float, default=0.5)
@@ -140,6 +140,7 @@ class HFAPI(API):
 
     def text_random_sampling(self, num_samples, prompt_counter=None, lens_dict=None):
         ratio_generation_training = num_samples / sum(prompt_counter.values())
+        print("ratio_generation_training: ", ratio_generation_training)
         all_sequences = []
         ppls_cur = []
         additional_info = []
@@ -150,13 +151,15 @@ class HFAPI(API):
         simulate_num = 0
         for prompt in tqdm(prompt_counter):
             # generation is proportional to the label distributions
-            simulate_num_seq_to_generate = round(
+            simulate_num_seq_to_generate =  round(
                 prompt_counter[prompt] * ratio_generation_training)
             simulate_num += simulate_num_seq_to_generate
 
         logging.info(
             f"should -- simulated generated sequences: %d", simulate_num)
         all_prefix_prompts = []
+        print("length of prompt_counter", len(prompt_counter))
+        print("self.use_subcategory: ", self.use_subcategory)
         for prompt in tqdm(prompt_counter):
             # generation is proportional to the label distributions
             num_seq_to_generate = round(
@@ -180,6 +183,8 @@ class HFAPI(API):
                     full_prompt_text = "Using a variety of sentence structures, write an abstract for a medical research paper: "
                 elif "asylex" in self.variation_type:
                     full_prompt_text = f"Suppose you are a legal expert. Write a sample legal case for refugee status determination where the verdict is {prompt}"
+                elif "aaai" in self.variation_type:
+                    full_prompt_text = f"Suppose you are medical expert. Write notes as a doctor would write for a patient where the diagnosis is given as {prompt}"
             else:
                 if "cas" in self.variation_type:
                     full_prompt_text = "Écrivez une phrase en français tirée d'un essai clinique. "
@@ -271,7 +276,7 @@ class HFAPI(API):
                         repetition_penalty=self.repetition_penalty,
                         do_sample=self.do_sample,
                         best_of=num_return_sequences,
-                        frequency_penalty=2,
+                        # frequency_penalty=2,
                         details=True,
                     )
 
@@ -317,6 +322,9 @@ class HFAPI(API):
         elif variation_type == "asylex_rephrase_tone":
             selected_style = ALL_ASYLEX_styles[random.randrange(len(ALL_ASYLEX_styles))]
             prompt = "The case verdict is {}. Please rephrase the following sentences {}:\n{} \n".format(label, selected_style, sequence)
+        elif variation_type == "aaai_rephrase_tone":
+            selected_style = ALL_AAAI_styles[random.randrange(len(ALL_AAAI_styles))]
+            prompt = "The diagnosis is {}. Please rephrase the following sentences {}:\n{} \n".format(label, selected_style, sequence)
         elif variation_type == 'psytar_rephrase_tone':
             label_map = {
                 "ADR": "Adverse Drug Reaction",
@@ -393,6 +401,7 @@ class HFAPI(API):
             for idx in range(start_idx, end_idx):
                 prompt = self._rephrase(
                     labels[idx], sequences[idx], variation_type)
+                
                 if self.apply_template:
                     prompt = self.tokenizer.apply_chat_template(
                         conversation=[
@@ -411,29 +420,45 @@ class HFAPI(API):
                 batch_prompt.append(prompt)
                 batch_labels.append(labels[idx])
             generated_sequences = []
-            for prompt in batch_prompt:
-                output = self.inference_client.text_generation(
-                    prompt=prompt,
-                    max_new_tokens=self.length,
-                    temperature=self.temperature,
-                    top_k=self.k,
-                    top_p=self.p,
-                    repetition_penalty=self.repetition_penalty,
-                    do_sample=self.do_sample,
-                    frequency_penalty=2,
-                )
-                generated_sequences.append(output)
-            
-
-            for idx in range(len(generated_sequences)):
-                seq = generated_sequences[idx]
-                seq = " ".join(seq.split())
-                lab = batch_labels[idx].strip().split("\t")
-                if seq:
-                    all_data.append(seq)  # no lables!
-                else:
-                    all_data.append(batch_prompt[idx])
-                all_labels.append(lab)
+            for prompt, label in zip(batch_prompt, batch_labels):
+                try_count = 0
+                success_flag = False
+                while try_count < 10:
+                    output = self.inference_client.text_generation(
+                        prompt=prompt,
+                        max_new_tokens=self.length,
+                        temperature=self.temperature,
+                        top_k=self.k,
+                        top_p=self.p,
+                        repetition_penalty=self.repetition_penalty,
+                        do_sample=self.do_sample,
+                        # frequency_penalty=2,
+                    )
+                    seq = " ".join(output.split())
+                    if seq:
+                        all_data.append(seq)
+                        lab = label.strip().split("\t")
+                        all_labels.append(lab)
+                        success_flag = True
+                        break
+                    else:
+                        print("No valid sequence generated, retrying...")
+                        try_count += 1
+                
+                if not success_flag:
+                    processed_prompt = batch_prompt[idx].split("<|start_header_id|>user<|end_header_id|>\n\n")[1].split("<|eot_id|>")[0]
+                    all_data.append(processed_prompt)
+                    print("No valid sequence generated, using the prompt as is." , processed_prompt)
+                    all_labels.append(batch_labels[idx])
+            # for idx in range(len(generated_sequences)):
+            #     seq = generated_sequences[idx]
+            #     seq = " ".join(seq.split())
+            #     lab = batch_labels[idx].strip().split("\t")
+            #     if seq:
+            #         all_data.append(seq)  # no lables!
+            #     else:
+            #         all_data.append(batch_prompt[idx])
+            #     all_labels.append(lab)
 
         logging.info(f" _text_variation output lens  {len(all_data)}")
 
