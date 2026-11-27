@@ -15,6 +15,7 @@ def dp_nn_histogram(public_features, private_features, noise_multiplier,
         return np.zeros(shape=num_true_public_features), np.zeros(shape=num_true_public_features)
 
     faiss_res = faiss.StandardGpuResources()
+    print(f"mode: {mode}")
     if mode == 'L2':
         index = faiss.IndexFlatL2(public_features.shape[1])
     # inner product; need normalization (https://github.com/spotify/annoy)
@@ -27,8 +28,8 @@ def dp_nn_histogram(public_features, private_features, noise_multiplier,
         index = faiss.IndexFlatIP(public_features.shape[1])
     else:
         raise Exception(f'Unknown mode {mode}')
-    if torch.cuda.is_available():
-        index = faiss.index_cpu_to_gpu(faiss_res, 0, index)
+    # if torch.cuda.is_available():
+    #     index = faiss.index_cpu_to_gpu(faiss_res, 0, index)
 
     # logging.info(f'public_features shape : {public_features.shape}')
     # logging.info(f'private_features shape : {private_features.shape}')
@@ -37,7 +38,19 @@ def dp_nn_histogram(public_features, private_features, noise_multiplier,
     # logging.info(f'Number of samples in index: {index.ntotal}')
 
     distance, ids = index.search(private_features, k=num_nearest_neighbor)
-    # logging.info('Finished search')
+    logging.info('Finished search')
+    logging.info(f'private_features shape: {private_features.shape}')
+    logging.info(f'public_features shape: {public_features.shape}')
+
+    # print("distance:", distance)
+    # print("ids:", ids)
+
+    # index2 = faiss.IndexFlatL2(public_features.shape[1])
+    # index2.add(public_features)
+    # distance2, ids2 = index2.search(private_features, k=num_nearest_neighbor)
+    # print("distance2:", distance2)
+    # print("ids2:", ids2)
+
 
     counter = Counter(list(ids.flatten()))
     # shape of the synthetic samples

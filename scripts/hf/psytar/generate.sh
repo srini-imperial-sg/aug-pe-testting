@@ -1,3 +1,4 @@
+noise=$1
 mlm_prob=0.5
 var_type="psytar_rephrase_tone"
 feat_ext="sentence-t5-base"
@@ -16,7 +17,6 @@ word_var_scale=0
 select_syn_mode=rank
 # model_type=gpt2
 model_type=meta-llama/Llama-3.2-1B-Instruct  
-noise=0
 args=""
 cls_batch_size=32
 api="HFGPT"
@@ -31,6 +31,7 @@ else
     batch_size=192
 fi
 
+batch_size=32
 ### load datacheckpoint 
 data_checkpoint_args=""
 for  (( iter=0; iter<=epochs; iter++ ))
@@ -49,16 +50,17 @@ echo load data from ${data_checkpoint_args} ${args}
 # threshold eps 1 break_noise 11.190000000005732 eps 1.000600
 # threshold eps 2 break_noise 6.010000000006762 eps 2.003046
 # threshold eps 4 break_noise 3.2800000000073055 eps 4.004656
+# "20.98" "11.19" "6.01" "3.28"
 
-for noise in "0" "20.98" "11.19" "6.01" "3.28"; do 
+for noise in $noise ; do 
     echo "Noise level ${noise}."
     result_folder="result/psytar/${model_type}_${feat_ext//\//_}/${num_samples}_n${noise}_L${L}_initL${init_L}_var${lookahead_degree}_${var_type}_${select_syn_mode}_len${length}var${word_var_scale}_t${temperature}"
     echo $result_folder
     mkdir -p $result_folder
     ### run PE
-    python main.py ${args} ${data_checkpoint_args} \
+    CUDA_VISIBLE_DEVICES=5 python main.py ${args} ${data_checkpoint_args} \
     --dataset cls/psytar \
-    --train_data_file ../../data/cls/psytar/original/train-original.jsonl \
+    --train_data_file /home/srini/dp-transformers/psytar/train-original.jsonl \
     --api ${api} \
     --noise ${noise} \
     --model_type ${model_type} \
@@ -81,5 +83,5 @@ for noise in "0" "20.98" "11.19" "6.01" "3.28"; do
     --result_folder ${result_folder} \
     --log_online \
     --apply_template \
-    --train_data_embeddings_file result/embeddings/sentence-t5-base/cls_psytar_train_all.embeddings.npz > $result_folder/output.log 2>&1
+    --train_data_embeddings_file /home/srini/comparison_study_aug_pe/aug-pe-testting/result/embeddings/sentence-t5-base/asylex_train_all.embeddings.npz > $result_folder/output.log 2>&1
 done

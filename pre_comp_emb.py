@@ -16,28 +16,42 @@ data_files = {'pubmed': 'data/pubmed/train.csv',
               'yelp': 'data/yelp/train.csv',
               'openreview': 'data/openreview/iclr23_reviews_train.csv',
               'cas': 'data/bigbio-datasets/',
-              'cls/psytar': '../../data/cls/psytar/original/train-original.jsonl',
-              'cls/hallmarks_of_cancer': '../../data/cls/hallmarks_of_cancer/original/train-original.jsonl',
+              'cls/psytar': '/data/psytar/train-original.jsonl',
+              'cls/hallmarks_of_cancer': 'data/cls/hallmarks_of_cancer/original/train-original.jsonl',
               'cls/mimic': '../../data/cls/mimic/original/mimic-train-chapter.jsonl',
-              'cls/n2c2_2008': '../../data/cls/n2c2_2008/original/train-original.jsonl',
+              'cls/n2c2_2008': 'data/cls/n2c2_2008/original/train-original.jsonl',
+              'cls/Daniel-ML': '../../data/cls/Daniel-ML/original/train_original.jsonl',
+              'cls/luckycat37': 'data/luckycat/train_original.jsonl',
+              'asylex': 'data/asylex/final.csv',
+              'aaai': 'data/aaai/folds/train_comb_fold1.csv'
               }
+
+
 parser = argparse.ArgumentParser()
 parser.add_argument("--model_name_or_path", type=str,
                     default="stsb-roberta-base-v2", required=False)
 parser.add_argument("--dataset", type=str, default="yelp",
                     choices=data_files.keys(),
                     required=False)
+parser.add_argument("--file_path", type=str, default=None, required=False)
+
 
 args = parser.parse_args()
 set_seed(seed=0, n_gpu=1)
 
-
 feature_extractor = args.model_name_or_path
+
+if args.file_path is None:
+    data_file = data_files[args.dataset]
+else:
+    data_file = args.file_path
+
+print("using file", data_file)
 
 
 all_private_samples, all_private_labels, private_labels_counter, private_labels_indexer = load_data(
     dataset=args.dataset,
-    data_file=data_files[args.dataset],
+    data_file=data_file,
     num_samples=-1)
 
 all_private_features = extract_features(

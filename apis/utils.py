@@ -61,8 +61,29 @@ ALL_OPENREVIEW_styles = ["in a detailed way",  "in a professional way", "with mo
 ALL_PUBMED_styles = ["in a professional way", "in a professional tone",  "in a professional style",   "in a concise manner",
                      "in a creative style", "using imagination", "in a storytelling tone",  "in a formal manner", "using a variety of sentence structures"
                      ]
+ALL_FINANCIAL_styles = ["in a detailed way",  "in a professional way", "with more details",
+                     "with a professional tone",  "in a professional style",   "in a concise manner"]
 
+ALL_FINANCIAL_luckycat_styles = ["Bloomberg-style concise reporting",
+    "Benzinga-style investor tips",
+    "Reuters-style factual tone",
+    "The Economist-style macroeconomic analysis",
+    "Wall Street Journal-style corporate focus",
+    "TechCrunch-style tech finance reporting"]
 
+ALL_ASYLEX_styles = ["in a professional way", "in a professional tone",  "in a professional style",   "in a concise manner", "in a formal manner"]
+
+ALL_AAAI_styles = ["in a professional way", "in a professional tone",  "in a professional style",   "in a concise manner", "in a formal manner"]
+
+ALL_EU_styles = ["Directive Style: Focus on objectives and allow Member States flexibility in implementation. Includes transposition deadlines and national authority references.",
+    "Regulation Style (Default): Directly binding and applicable in all Member States. Full legal structure with articles, amendments, and obligations.",
+    "Executive Summary Introduction: Begin with a brief summary outlining the regulation's purpose and context before the formal articles.",
+    "Parliamentary Language: Use formal phrasing with references like 'Having regard to...' and 'Whereas...', common in EU preambles.",
+    "Article-Based Breakdown: Structure the text into numbered Articles and subparagraphs to mirror official EU document formatting.",
+    "Industry-Focused Language: Adapt wording to match the technical language of the relevant sector (e.g., agriculture, customs, trade).",
+    "Legal Minimalist Style: Use concise, stripped-down legal language with short articles and minimal commentary."]
+
+IMDB_styles = ['in a professional way', 'in a professional tone', 'in a professional style', 'in a concise manner', 'in a formal manner']
 def set_seed(seed, n_gpu=0):
     torch.manual_seed(seed)
     np.random.seed(seed)

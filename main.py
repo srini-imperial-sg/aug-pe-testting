@@ -41,7 +41,6 @@ def shorten_filename(filename):
 
 def main():
     args, api = parse_args()
-
     if args.log_online:
         import wandb
         _ = os.system('wandb login {}'.format(args.wandb_key))
@@ -71,7 +70,7 @@ def main():
 
     private_classes = list(private_labels_counter.keys())
     logging.info(
-        f'Private_num_classes: {len(private_classes)}, Private_num_samples: {len(all_private_samples)}, Private_num_labels:{len(all_private_labels)}')
+        f'Private_num_classes: {len(private_classes)}, Private_num_samples: {len(all_private_samples)}, Private_num_labels:{len(all_private_labels)}, private_labels_counter: {len(private_labels_counter)}')
 
     logging.info('Extracting features of private data')
     if args.train_data_embeddings_file != '':
@@ -116,6 +115,7 @@ def main():
             logging.info('Ignoring data_checkpoint_step')
         start_t = 1
 
+    # print("seed_syn_samples", seed_syn_samples)
     # save initial synthetic samples.
     log_samples(samples=seed_syn_samples, additional_info=seed_additional_info,
                 folder=f'{args.result_folder}/{start_t-1}')

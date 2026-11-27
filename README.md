@@ -81,6 +81,30 @@ For visualization with Wandb, configure the `--wandb_key` and `--project` with y
 
 ## 🚀 Run (open-source LLMs)
 
+### Hugging Face Text Generation Inference (TGI)
+
+The launcher serves `meta-llama/Llama-3.2-1B-Instruct` in Docker on port `8000` and caches model files under `data/`. Run it on a machine with an NVIDIA GPU and Docker configured for GPU access. The launcher defaults to GPU `5`. If your machine uses a different GPU, update `CUDA_VISIBLE_DEVICES` in the launcher. [launch_tgi.sh](launch_tgi.sh) · [Hugging Face TGI setup guide](https://huggingface.co/docs/text-generation-inference/en/quicktour)
+
+1. Create a Hugging Face read token. If the model page asks you to request access or accept terms, do that with the same account. [Token settings](https://huggingface.co/settings/tokens) · [Model page](https://huggingface.co/meta-llama/Llama-3.2-1B-Instruct)
+2. From the repository root, enter the token when prompted and start TGI. The prompt hides the token, and the launcher passes the exported `HF_TOKEN` to Docker.
+
+   ```bash
+   read -rsp 'Paste your Hugging Face read token and press Enter. ' HF_TOKEN
+   printf '\n'
+   export HF_TOKEN
+   bash launch_tgi.sh
+   ```
+
+3. Leave TGI running. Once the model has loaded, send a test request from a second terminal. A successful response includes `generated_text`. [TGI request format](https://huggingface.co/docs/text-generation-inference/en/quicktour#consuming-tgi)
+
+   ```bash
+   curl -fsS http://localhost:8000/generate \
+     -H 'Content-Type: application/json' \
+     -d '{"inputs":"In one sentence, explain what a tokenizer does.","parameters":{"max_new_tokens":32}}'
+   ```
+
+For Aug-PE generation, use `--api HFGPT` and set `--model_type` to the same model ID as the launcher. The default `--hostname` is `http://localhost:8000/generate`. If the model is gated and its tokenizer needs to be downloaded, export `HF_TOKEN` in the generation terminal too.
+
 ### 📂 Generate DP Synthetic Text with Aug-PE
 
 Utilize open-source LLMs from Hugging Face to generate synthetic data:
