@@ -152,9 +152,11 @@ def log_samples(samples, additional_info, folder):
     if "pubmed" in additional_info[0]:  # unconditional
         title = ['text']
     elif "reject" in additional_info[0] or "granted" in additional_info[0] or "uncertain" in additional_info[0]:
-        title = ['text', 'decision_outcome']
+        title = ['text', 'label']
     elif "asylex" in additional_info[0]:
         title = ['text', 'label']
+    elif "aaai" in additional_info[0]:
+        title = ['text', 'labels']
     else:
         title = ['text', 'label1', 'label2']
     try:

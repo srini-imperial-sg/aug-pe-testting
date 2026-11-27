@@ -31,16 +31,22 @@ case $1 in
     python pre_comp_emb.py --dataset cls/mimic --model_name_or_path 'kamalkraj/BioSimCSE-BioLinkBERT-BASE'
     ;;
   --luckycat37)
-    python pre_comp_emb.py --dataset  'cls/luckycat37' --model_name_or_path 'sentence-t5-base'
+    CUDA_VISIBLE_DEVICES=5 python pre_comp_emb.py --dataset  'cls/luckycat37' --model_name_or_path 'sentence-t5-base'
     ;;
   --asylex)
-    python pre_comp_emb.py --dataset asylex --model_name_or_path 'sentence-t5-base'
+    CUDA_VISIBLE_DEVICES=5 python pre_comp_emb.py --dataset asylex --model_name_or_path 'sentence-t5-base'
     ;;
   --aaai)
-    CUDA_VISIBLE_DEVICES=7 python pre_comp_emb.py --dataset aaai --model_name_or_path 'sentence-t5-base'
+    CUDA_VISIBLE_DEVICES=7 python comp_embeddings.py --dataset aaai --model_name_or_path  'sentence-t5-base' --dataset_path 'data/aaai/folds/combined_data.csv'
     ;;
   --n2c2_2008)
     python pre_comp_emb.py --dataset cls/n2c2_2008 --model_name_or_path 'kamalkraj/BioSimCSE-BioLinkBERT-BASE'
+    ;;
+  --imdb)
+    python pre_comp_emb.py --dataset imdb --model_name_or_path 'sentence-t5-base'
+    ;;
+  --eurlex)
+    python pre_comp_emb.py --dataset eurlex --model_name_or_path 'sentence-t5-base'
     ;;
   *)
     echo "Invalid dataset. Available datasets are: --openreview, --pubmed, --yelp, --psytar, --hallmarks_of_cancer"

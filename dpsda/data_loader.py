@@ -16,7 +16,7 @@ def sample_dataset(data_name, dataset, label_column_name='label1', sample_size=5
             label2 = 'Review Stars: 5.0'
             indices = np.where((np.array(training_dataset['label1']) == label1) & (
                 np.array(training_dataset['label2']) == label2))[0]
-        elif data_name == "asylex":
+        elif data_name == "asylex" or data_name == "imdb":
             indices = list(range(len(training_dataset)))
         elif data_name == "openreview":
             area = "Area: Social Aspects of Machine Learning (eg, AI safety, fairness, privacy, interpretability, human-AI interaction, ethics)"
@@ -41,7 +41,7 @@ def sample_dataset(data_name, dataset, label_column_name='label1', sample_size=5
                 indices, size=sample_size, replace=False)
             np.random.shuffle(sample_indices)
     else:
-        if data_name == "pubmed" or data_name == "openreview" or data_name == "asylex" or data_name == "aaai":  # random sample
+        if data_name == "pubmed" or data_name == "openreview" or data_name == "asylex" or data_name == "aaai" or data_name == "imdb":  # random sample
             indices = list(range(len(training_dataset)))
             sample_indices = np.random.choice(
                 indices, size=sample_size, replace=False)
@@ -76,21 +76,26 @@ def load_dataset_with_special(data_file, gen):
 
 
 def load_data(dataset="yelp", data_file="data/yelp/train.csv", num_samples=-1, subsample_one_class=False, gen=False):
-    print("data_file", data_file)
-    if dataset in ('cls/cas', 'cls/psytar', 'cls/hallmarks_of_cancer', 'cls/mimic', 'cls/n2c2_2008', 'cls/Daniel-ML', 'cls/luckycat37'):
+   
+    if dataset in ('cls/cas', 'cls/psytar', 'eurlex', 'cls/hallmarks_of_cancer', 'cls/mimic', 'cls/n2c2_2008', 'cls/Daniel-ML', 'cls/luckycat37', 'imdb'):
+
         try:
           raw_datasets = load_dataset(f'json', data_files=data_file, trust_remote_code=True)
         except:
-          raw_datasets = load_dataset(f'json', data_files=data_file)
-        print(raw_datasets['train'][:3])
+          raw_datasets = load_dataset(f'csv', data_files=data_file)
+        print(raw_datasets)
         def process(x):
-            x['labels'] = '|'.join(x['label']) or "NoLabel"
+            try:
+                if dataset == "imdb":
+                    x['labels'] = "positive" if x['label'] == 0 else "negative"
+                else:
+                    x['labels'] = '|'.join(x['label']) or "NoLabel"
+            except:
+                x['labels'] = x['label1']
             return x
         raw_datasets = raw_datasets.map(process)
-        print(raw_datasets['train'][:3])
         original_data = sample_dataset(raw_datasets['train'], raw_datasets, label_column_name='labels',
                                        sample_size=num_samples, subsample_one_class=subsample_one_class)
-        print(original_data['train'][:3])
         prompt_counter = collections.Counter()
         label_column_index = ['labels']
         prompt_idexer = collections.defaultdict(list)
@@ -106,10 +111,7 @@ def load_data(dataset="yelp", data_file="data/yelp/train.csv", num_samples=-1, s
         train_data = [d for d in original_data['train']['text']]
         train_labels = ["\t".join([line[idx] for idx in label_column_index])
                         for line in original_data['train']]
-        print(train_data[:3])
-        print(train_labels[:3])
-        print(prompt_idexer.keys())
-        # print(dict(prompt_idexer))
+      
         return train_data, train_labels, prompt_counter, dict(prompt_idexer)
     
     if dataset == "yelp":
@@ -196,21 +198,22 @@ def load_data(dataset="yelp", data_file="data/yelp/train.csv", num_samples=-1, s
     elif dataset == "asylex":
         prompt_counter = collections.Counter()
         raw_datasets = load_dataset_with_special(data_file, gen)
-        original_data = sample_dataset(dataset, raw_datasets, label_column_name='decision_outcome',
+        original_data = sample_dataset(dataset, raw_datasets, label_column_name='label',
                                        sample_size=num_samples, subsample_one_class=subsample_one_class)
         prompt_idexer = dict()
         train_data = []
         train_labels = []
-        decision_outcome_map = {
-            0: "reject",
-            1: "granted",
-            2: "uncertain"
-        }
+        # decision_outcome_map = {
+        #     0: "reject",
+        #     1: "granted",
+        #     2: "uncertain"
+        # }
+        print("original_data", original_data)
         for i , line in enumerate(original_data['train']):
             try:
-                prompt = f"{decision_outcome_map[line['decision_outcome']]}"
+                prompt = f"{line['label']}"
             except:
-                prompt = f"{line['decision_outcome']}"
+                prompt = f"{line['label']}"
             prompt_counter[prompt] += 1
             if prompt not in prompt_idexer.keys():
                 prompt_idexer[prompt] = [i]

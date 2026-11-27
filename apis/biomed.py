@@ -3,6 +3,8 @@ import random
 
 
 def get_prompt(prompt, ds_name):
+    if ds_name == 'imdb':
+        return get_imdb_prompt(prompt)
     if ds_name == 'psytar':
         return get_psytar_prompt(prompt)
     elif ds_name == 'hallmarks_of_cancer':
@@ -13,9 +15,31 @@ def get_prompt(prompt, ds_name):
         return get_n2c2_2008_prompt(prompt)
     elif ds_name == 'danielml':
         return get_danielml_prompt_from_sentiment_only(prompt)
+    elif ds_name == 'eurlex':
+        return get_eurlex_prompt(prompt)
     elif ds_name == 'luckycat37':
         return get_luckycat37_prompt_from_sentiment_only(prompt)
     raise NotImplementedError()
+
+
+def get_imdb_prompt(prompt):
+    labels = prompt.split("|")
+    return f"Write a review for a movie with the following sentiment: {', '.join(labels)}"
+
+def get_eurlex_prompt(prompt):
+    labels = prompt.split("|")
+
+    styles = [
+    "Directive Style: Focus on objectives and allow Member States flexibility in implementation. Includes transposition deadlines and national authority references.",
+    "Regulation Style (Default): Directly binding and applicable in all Member States. Full legal structure with articles, amendments, and obligations.",
+    "Executive Summary Introduction: Begin with a brief summary outlining the regulation's purpose and context before the formal articles.",
+    "Parliamentary Language: Use formal phrasing with references like 'Having regard to...' and 'Whereas...', common in EU preambles.",
+    "Article-Based Breakdown: Structure the text into numbered Articles and subparagraphs to mirror official EU document formatting.",
+    "Industry-Focused Language: Adapt wording to match the technical language of the relevant sector (e.g., agriculture, customs, trade).",
+    "Legal Minimalist Style: Use concise, stripped-down legal language with short articles and minimal commentary."
+]
+    return f"You are drafting a new European Union regulation or decision using the following style: {random.choice(styles)} Based on the following labels: {', '.join(labels)}, write a regulation or decision:"
+
 
 def get_psytar_prompt(prompt):
     labels = prompt.split("|")
@@ -244,28 +268,28 @@ Physical Therapist
 Social Worker
 Palliative Care Specialist""".splitlines()
 
-    label_map = [ 
-            ((1, 139), "Infectious And Parasitic Diseases"),
-            ((140, 239), "Neoplasms"),
-            ((240, 279), "Endocrine, Nutritional And Metabolic Diseases, And Immunity Disorders"),
-            ((280, 289), "Diseases Of The Blood And Blood-Forming Organs"),
-            ((290, 319), "Mental Disorders"),
-            ((320, 389), "Diseases Of The Nervous System And Sense Organs"),
-            ((390, 459), "Diseases Of The Circulatory System"),
-            ((460, 519), "Diseases Of The Respiratory System"),
-            ((520, 579), "Diseases Of The Digestive System"),
-            ((580, 629), "Diseases Of The Genitourinary System"),
-            ((630, 679), "Complications Of Pregnancy, Childbirth, And The Puerperium"),
-            ((680, 709), "Diseases Of The Skin And Subcutaneous Tissue"),
-            ((710, 739), "Diseases Of The Musculoskeletal System And Connective Tissue"),
-            ((740, 759), "Congenital Anomalies"),
-            ((760, 779), "Certain Conditions Originating In The Perinatal Period"),
-            ((780, 799), "Symptoms, Signs, And Ill-Defined Conditions"),
-            ((800, 999), "Injury And Poisoning")
-        ]
-    label_map = {l:l for _, l in label_map}
+    # label_map = [ 
+    #         ((1, 139), "Infectious And Parasitic Diseases"),
+    #         ((140, 239), "Neoplasms"),
+    #         ((240, 279), "Endocrine, Nutritional And Metabolic Diseases, And Immunity Disorders"),
+    #         ((280, 289), "Diseases Of The Blood And Blood-Forming Organs"),
+    #         ((290, 319), "Mental Disorders"),
+    #         ((320, 389), "Diseases Of The Nervous System And Sense Organs"),
+    #         ((390, 459), "Diseases Of The Circulatory System"),
+    #         ((460, 519), "Diseases Of The Respiratory System"),
+    #         ((520, 579), "Diseases Of The Digestive System"),
+    #         ((580, 629), "Diseases Of The Genitourinary System"),
+    #         ((630, 679), "Complications Of Pregnancy, Childbirth, And The Puerperium"),
+    #         ((680, 709), "Diseases Of The Skin And Subcutaneous Tissue"),
+    #         ((710, 739), "Diseases Of The Musculoskeletal System And Connective Tissue"),
+    #         ((740, 759), "Congenital Anomalies"),
+    #         ((760, 779), "Certain Conditions Originating In The Perinatal Period"),
+    #         ((780, 799), "Symptoms, Signs, And Ill-Defined Conditions"),
+    #         ((800, 999), "Injury And Poisoning")
+    #     ]
+    # label_map = {l:l for _, l in label_map}
     style = random.choice(styles)
-    return f"Suppose you're a {style} writing a brief hospital history section as part of a discharge summary of a patient admitted to ICU. Mentions the following disesases: {', '.join(label_map.get(l, 'None.') for l in labels)}"
+    return f"Suppose you're a {style} writing a brief hospital history section as part of a discharge summary of a patient admitted to ICU. Mention the following disesases: {', '.join([l for l in labels])}."
 
 
 ALL_MIMIC_TONES = [

@@ -6,7 +6,7 @@ from .api import API
 from apis.biomed import get_prompt, ALL_MIMIC_TONES
 import transformers
 import random
-from .utils import set_seed, get_subcategories, ALL_styles, ALL_OPENREVIEW_styles, ALL_PUBMED_styles, ALL_FINANCIAL_styles, ALL_FINANCIAL_luckycat_styles, ALL_ASYLEX_styles, ALL_AAAI_styles
+from .utils import set_seed, get_subcategories, ALL_styles, ALL_OPENREVIEW_styles, ALL_PUBMED_styles, ALL_FINANCIAL_styles, ALL_FINANCIAL_luckycat_styles, ALL_ASYLEX_styles, ALL_AAAI_styles, ALL_EU_styles
 import re
 import collections
 from huggingface_hub import InferenceClient
@@ -18,9 +18,10 @@ class HFAPI(API):
                  length, temperature, top_k, top_p, repetition_penalty, do_sample, fp16, no_cuda,
                  random_sampling_batch_size, num_beams, dry_run,
                  variation_batch_size, apply_template,
+                 hostname,
                  *args, **kwargs):
         super().__init__(*args, **kwargs)
-
+        #print("hostname", hostname)
         self.model_type = model_type
         self.variation_type = variation_type
         self.output_dir = output_dir
@@ -38,7 +39,7 @@ class HFAPI(API):
             "cuda" if torch.cuda.is_available() and not self.no_cuda else "cpu")
         self.n_gpu = 0 if self.no_cuda else torch.cuda.device_count()
         self.inference_client = InferenceClient(
-            base_url="http://localhost:8000/generate"
+            base_url=hostname
         )
         set_seed(seed=seed, n_gpu=self.n_gpu)
         self.dry_run = dry_run
@@ -59,20 +60,20 @@ class HFAPI(API):
         self.tokenizer.pad_token = self.tokenizer.eos_token
         self.tokenizer.padding_side = "left"
 
-        if "gpt2" not in self.model_type:
-            # use torch.float16 for large LLMs
-            try:
-                self.model = transformers.AutoModelForCausalLM.from_pretrained(
-                    model_name_or_path, device_map="auto", torch_dtype=torch.bfloat16)
-            except ValueError:
-                self.model = transformers.AutoModelForCausalLM.from_pretrained(
-                    model_name_or_path, device_map="cuda", torch_dtype=torch.bfloat16)
-        else:
-            pad_token_id = self.tokenizer.pad_token_id if self.tokenizer.pad_token_id else self.tokenizer.eos_token_id
-            self.model = transformers.AutoModelForCausalLM.from_pretrained(
-                model_name_or_path, device_map="auto", pad_token_id=pad_token_id)
-            if self.fp16:
-                self.model.half()
+        # if "gpt2" not in self.model_type:
+        #     # use torch.float16 for large LLMs
+        #     try:
+        #         self.model = transformers.AutoModelForCausalLM.from_pretrained(
+        #             model_name_or_path, device_map="auto", torch_dtype=torch.bfloat16)
+        #     except ValueError:
+        #         self.model = transformers.AutoModelForCausalLM.from_pretrained(
+        #             model_name_or_path, device_map="cuda", torch_dtype=torch.bfloat16)
+        # else:
+        #     pad_token_id = self.tokenizer.pad_token_id if self.tokenizer.pad_token_id else self.tokenizer.eos_token_id
+        #     self.model = transformers.AutoModelForCausalLM.from_pretrained(
+        #         model_name_or_path, device_map="auto", pad_token_id=pad_token_id)
+        #     if self.fp16:
+        #         self.model.half()
 
         self.random_sampling_batch_size = random_sampling_batch_size
         self.variation_batch_size = variation_batch_size
@@ -93,7 +94,7 @@ class HFAPI(API):
             default='rephrase',
             choices=["yelp_rephrase_tone", "openreview_rephrase_tone", "pubmed_rephrase_tone", "cas_paraphrase", 'psytar_rephrase_tone',
                      'hallmarks_of_cancer_rephrase_tone', "mimic_rephrase_tone", "n2c2_2008_rephrase_tone", "danielml_rephrase_tone",
-                     "luckycat37_rephrase_tone", "asylex_rephrase_tone", "aaai_rephrase_tone"
+                     "luckycat37_rephrase_tone", "asylex_rephrase_tone", "aaai_rephrase_tone", "eurlex_rephrase_tone", "imdb_rephrase_tone"
                      ],
             help='Which image feature extractor to use')
         parser.add_argument("--mlm_probability", type=float, default=0.5)
@@ -136,17 +137,19 @@ class HFAPI(API):
         
         parser.add_argument("--apply_template", action="store_true",
                             help="Whether to apply a chat template.")
+        parser.add_argument("--hostname", type=str, default='http://localhost:8000/generate',
+                            help="TGI inference server hostname")
         return parser
 
     def text_random_sampling(self, num_samples, prompt_counter=None, lens_dict=None):
         ratio_generation_training = num_samples / sum(prompt_counter.values())
-        print("ratio_generation_training: ", ratio_generation_training)
+        #print("ratio_generation_training: ", ratio_generation_training)
         all_sequences = []
         ppls_cur = []
         additional_info = []
         sync_labels_counter = collections.Counter()
 
-        self.model.eval()
+        # self.model.eval()
 
         simulate_num = 0
         for prompt in tqdm(prompt_counter):
@@ -158,8 +161,8 @@ class HFAPI(API):
         logging.info(
             f"should -- simulated generated sequences: %d", simulate_num)
         all_prefix_prompts = []
-        print("length of prompt_counter", len(prompt_counter))
-        print("self.use_subcategory: ", self.use_subcategory)
+        #print("length of prompt_counter", len(prompt_counter))
+        #print("self.use_subcategory: ", self.use_subcategory)
         for prompt in tqdm(prompt_counter):
             # generation is proportional to the label distributions
             num_seq_to_generate = round(
@@ -199,10 +202,17 @@ class HFAPI(API):
                     full_prompt_text += ":"
                 elif 'psytar' in self.variation_type:
                     full_prompt_text = get_prompt(prompt, 'psytar')
+                elif 'eurlex' in self.variation_type:
+                    full_prompt_text = get_prompt(prompt, 'eurlex')
                 elif 'hallmarks_of_cancer' in self.variation_type:
                     full_prompt_text = get_prompt(prompt, 'hallmarks_of_cancer')
                 elif 'mimic' in self.variation_type:
                     full_prompt_text = get_prompt(prompt, 'mimic')
+                elif 'imdb' in self.variation_type:
+                    print("prompt", prompt)
+                    full_prompt_text = get_prompt(prompt, 'imdb')
+                    print("full_prompt_text", full_prompt_text)
+                    #print("full_prompt_text", full_prompt_text)
                 elif 'n2c2_2008' in self.variation_type:
                     full_prompt_text = get_prompt(prompt, 'n2c2_2008')
                 elif 'danielml' in self.variation_type:
@@ -258,10 +268,10 @@ class HFAPI(API):
             batch_size = seq_num + 1  # TODO: improve
         all_data = []
         num_return_sequences = 2 if batch_size > 1 else 1
-        print("seq_num", seq_num)
-        print("batch_size", batch_size)
-        print("num_return_sequences", num_return_sequences)
-        print("max_length", max_length)
+        # print("seq_num", seq_num)
+        # print("batch_size", batch_size)
+        # print("num_return_sequences", num_return_sequences)
+        # print("max_length", max_length)
         for i in tqdm(range(seq_num // batch_size + 1)):
             if self.dry_run:
                 generated_sequences = ["s" * max_length] * batch_size
@@ -299,7 +309,7 @@ class HFAPI(API):
 
     def text_variation(self, sequences, additional_info,
                        num_variations_per_sequence, variation_degree):
-        self.model.eval()
+        # self.model.eval()
         # self.model.to(self.device)
         variations = []
         for idx in tqdm(range(num_variations_per_sequence)):
@@ -325,6 +335,9 @@ class HFAPI(API):
         elif variation_type == "aaai_rephrase_tone":
             selected_style = ALL_AAAI_styles[random.randrange(len(ALL_AAAI_styles))]
             prompt = "The diagnosis is {}. Please rephrase the following sentences {}:\n{} \n".format(label, selected_style, sequence)
+        elif variation_type == "eurlex_rephrase_tone":
+            selected_style = random.choice(ALL_EU_styles)
+            prompt = "Based on the following labels: {}, Please rephrase the following sentences in {}:\n{} \n".format(label, selected_style, sequence)
         elif variation_type == 'psytar_rephrase_tone':
             label_map = {
                 "ADR": "Adverse Drug Reaction",
@@ -356,6 +369,10 @@ class HFAPI(API):
         elif 'mimic' in variation_type or 'n2c2_2008' in variation_type:
             selected_style = random.choice(ALL_MIMIC_TONES)
             prompt = f"Keeping the information about {label.replace('|', ', ')}, rephrase the note in the following style: {selected_style}.\nNote:\n{sequence}"
+        elif 'imdb' in variation_type:
+            selected_style = ALL_styles[random.randrange(len(ALL_styles))]
+            prompt = f"Rewrite the following review for a movie with the following sentiment: {label} {selected_style}.\nReview:\n{sequence}"
+            print("rephrased prompt", prompt)
         elif 'danielml' in variation_type:
             selected_style = random.choice(ALL_FINANCIAL_styles)
             label_map_prompts = {
@@ -386,7 +403,7 @@ class HFAPI(API):
         all_data = []
         all_labels = []
 
-        self.model.eval()
+        # self.model.eval()
         self.mlm_probability = variation_degree
 
         for i in tqdm(range(num_seq // batch_size + 1)):

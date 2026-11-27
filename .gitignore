@@ -171,3 +171,10 @@ cython_debug/
 *.csv
 *.ipynb
 *.jsonl
+
+
+# Shell scripts whose name contains "generate" (any directory)
+**/*generate*.sh
+**/*run_parallel*.sh
+
+*.json
